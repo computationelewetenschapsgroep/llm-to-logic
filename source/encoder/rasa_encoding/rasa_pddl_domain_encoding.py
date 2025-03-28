@@ -14,10 +14,10 @@ class DomainEncoding:
             CheckBalance
         ]
 
-        self.constants = {}
-        self.types = {}
-        self.predicates = {}
-        self.functions = {}
+        # self.constants = {}
+        # self.types = {}
+        # self.predicates = {}
+        # self.functions = {}
 
         for feature_action_con in feature_actions_collection:
             fa: FeatureAction = feature_action_con(
