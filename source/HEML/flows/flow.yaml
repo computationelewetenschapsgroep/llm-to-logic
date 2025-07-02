@@ -1,0 +1,75 @@
+flows:
+  heml_flow:
+    description: "Heavy Equipment Multi-part Logistics orchestration flow"
+    steps:
+
+      - collect: equipment_data
+        description: "Load equipment parts data"
+
+      - collect: transporter_data
+        description: "Fetch transporter data - capabilities/availability/compatibility with equipment parts"
+
+      - collect: operational_specifications
+        description: "Collect all constraints - sequencing/limits/assembly windows"
+
+      - collect: warehouse_status
+        description: "Initial state of warehouses"
+
+      - collect: assembly_line_status
+        description: "Availability windows and queue capacities for all assembly lines"
+
+      - id: configure_equipment_allocations
+        action: allocate_equipment_to_schedule
+        description: "Assign equipment parts to expected time slots and define transport priorities"
+
+      - id: allocate_transporters
+        action: select_transporter_for_parts
+        description: "Based on part constraints and compatibility allocate the transporter" 
+
+      - id: assign_priority_to_parts
+        action: assign_priority_tags
+        description: "Tag equipment with priority levels for transport and assembly"
+
+      - id: route_parts_for_processing
+        action: route_parts
+        description: "Decide if part goes to assembly or warehouse based on current state"
+        next:
+          - if: outputs.route_parts_for_processing.send_to_assembly == true
+            then: check_assembly_line
+          - else: store_in_warehouse
+
+      - id: check_assembly_line
+        action: is_assembly_line_ready
+        description: "Check if parts are in order and assembly line is active"
+        next:
+          - if: outputs.check_assembly_line.ready == true
+            then: assemble_parts
+          - else: store_in_warehouse
+
+      - id: store_in_warehouse
+        action: update_warehouse_inventory
+        description: "Part stored until assembly conditions are met"
+        next: monitor_warehouse_for_trip
+
+      - id: monitor_warehouse_for_trip
+        action: check_trip_trigger_from_warehouse
+        description: "Monitor if full set of parts for an equipment unit is present and ordered"
+        next:
+          - if: outputs.monitor_warehouse_for_trip.can_trigger_trip == true
+            then: create_transport_trip
+          - else: wait_and_retry
+
+      - id: create_transport_trip
+        action: schedule_trip_to_assembly
+        description: "Initiate a trip from warehouse to assembly line"
+        next: check_assembly_line
+
+      - id: assemble_parts
+        action: start_equipment_assembly
+        description: "Trigger assembly once all conditions are met"
+        next: END
+
+      - id: wait_and_retry
+        action: sleep_and_monitor
+        description: "Retry loop until next state change is detected"
+        next: monitor_warehouse_for_trip
