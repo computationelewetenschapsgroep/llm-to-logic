@@ -1,0 +1,35 @@
+flows:
+  optimize_trip_schedule:
+    description: |
+      Applies a scheduling optimizer to reorder or refine the trip plan for efficiency.
+    name: optimize transport schedule
+    steps:
+      - id: run_optimizer
+        action: action_run_trip_optimizer
+        params:
+          trip_schedule: slots.trip_schedule
+        set_slots:
+          - optimized_schedule: result
+        next: set_eta_step_1
+
+      - id: set_eta_step_1
+        action: action_set_eta
+        params:
+          trip_id: slots.optimized_schedule[0].trip_id
+        next: set_eta_step_2
+
+      - id: set_eta_step_2
+        action: action_set_eta
+        params:
+          trip_id: slots.optimized_schedule[1].trip_id
+        next: set_eta_step_3
+
+      - id: set_eta_step_3
+        action: action_set_eta
+        params:
+          trip_id: slots.optimized_schedule[2].trip_id
+        next: filter_operations_queue
+
+      - id: filter_operations_queue
+        action: action_filter_ops_queue
+        next: END

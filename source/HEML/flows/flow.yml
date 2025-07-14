@@ -21,18 +21,36 @@ flows:
       - id: configure_equipment_allocations
         action: allocate_equipment_to_schedule
         description: "Assign equipment parts to expected time slots and define transport priorities"
+        parameters:
+          - equipment_parts
+          - sequencing_rules
+          - assembly_window
 
       - id: allocate_transporters
         action: select_transporter_for_parts
         description: "Based on part constraints and compatibility allocate the transporter" 
+        parameters:
+          - allocations
+          - transporters
+          - compatibility_matrix
+          - handling_constraints
 
       - id: assign_priority_to_parts
         action: assign_priority_tags
         description: "Tag equipment with priority levels for transport and assembly"
+        parameters:
+          - allocations
+          - sequencing_rules
 
       - id: route_parts_for_processing
         action: route_parts
         description: "Decide if part goes to assembly or warehouse based on current state"
+        parameters:
+          - priority_tags
+          - allocations
+          - assembly_lines
+          - sequencing_rules
+          - warehouse_inventory
         next:
           - if: outputs.route_parts_for_processing.send_to_assembly == true
             then: check_assembly_line
@@ -41,6 +59,12 @@ flows:
       - id: check_assembly_line
         action: is_assembly_line_ready
         description: "Check if parts are in order and assembly line is active"
+        parameters:
+          - route_map
+          - assembly_lines
+          - sequencing_rules
+        returns:
+          - ready: Boolean
         next:
           - if: outputs.check_assembly_line.ready == true
             then: assemble_parts

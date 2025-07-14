@@ -1,0 +1,117 @@
+flows:
+  processor:
+    steps:
+      - id: check_manufacturing_queue
+        action: action_check_manufacturing_queue_empty
+        next:
+          - if: "slots.manufacturing_queue_empty == true"
+            then: handle_warehouse_recheck
+          - else: process_manufacturing_equipment_part
+
+      - id: process_manufacturing_equipment_part
+        action: action_process_manufacturing_equipment_part
+        params:
+          equipment_part_id: slots.next_equipment_part_id
+        next: schedule_transporter_trip_to_warehouse
+
+      - id: schedule_transporter_trip_to_warehouse
+        action: action_schedule_transporter_trip
+        params:
+          from_site: "ManufacturerSite"
+          to_site: "Warehouse"
+          equipment_part_id: slots.next_equipment_part_id
+        next: confirm_transporter_trip_scheduled
+
+      - id: confirm_transporter_trip_scheduled
+        action: utter_transporter_trip_scheduled
+        next: check_transporter_trip_status
+
+      - id: check_transporter_trip_status
+        action: action_check_transporter_trip_status
+        params:
+          transporter_trip_id: slots.current_transporter_trip_id
+        next:
+          - if: "slots.transporter_trip_completed == true"
+            then: process_equipment_part_arrival
+          - else: wait_and_recheck_transporter_trip
+
+      - id: wait_and_recheck_transporter_trip
+        action: action_wait_short
+        next: check_transporter_trip_status
+
+      - id: process_equipment_part_arrival
+        action: action_process_equipment_part_arrival
+        params:
+          equipment_part_id: slots.next_equipment_part_id
+        next:
+          - if: "slots.assembly_ready == true and slots.within_assembly_window == true"
+            then: move_equipment_part_to_assembly_queue
+          - else: move_equipment_part_to_warehouse
+
+      - id: move_equipment_part_to_assembly_queue
+        action: action_move_equipment_part_to_assembly_queue
+        params:
+          equipment_part_id: slots.next_equipment_part_id
+        next: check_assembly_queue
+
+      - id: move_equipment_part_to_warehouse
+        action: action_store_equipment_part_in_warehouse
+        params:
+          equipment_part_id: slots.next_equipment_part_id
+        next: rebatch_manufacturing_queue
+
+      - id: rebatch_manufacturing_queue
+        action: action_rebatch_manufacturing_queue
+        next: check_manufacturing_queue
+
+      - id: handle_warehouse_recheck
+        action: action_recheck_warehouse_for_assembly
+        next:
+          - if: "slots.assembly_queue_ready == true"
+            then: check_offseason_before_start_assembly
+          - else: idle_wait_or_end
+
+      - id: check_offseason_before_start_assembly
+        action: action_check_offseason_window
+        next:
+          - if: "slots.in_offseason == false"
+            then: start_assembly_process
+          - else: utter_offseason_wait
+
+      - id: start_assembly_process
+        action: action_start_assembly
+        params:
+          equipment_id: slots.next_equipment_to_assemble
+        next: monitor_assembly_progress
+
+      - id: monitor_assembly_progress
+        action: action_monitor_assembly
+        params:
+          equipment_id: slots.next_equipment_to_assemble
+        next:
+          - if: "slots.assembly_completed == true"
+            then: finalize_assembly
+          - else:
+              - action: action_check_offseason_window
+              - next:
+                  - if: "slots.in_offseason == false"
+                    then: wait_and_monitor_assembly
+                  - else: utter_offseason_wait
+
+      - id: wait_and_monitor_assembly
+        action: action_wait_short
+        next: monitor_assembly_progress
+
+      - id: finalize_assembly
+        action: action_finalize_assembly
+        params:
+          equipment_id: slots.next_equipment_to_assemble
+        next: handle_warehouse_recheck
+
+      - id: utter_offseason_wait
+        action: utter_assembly_offseason_wait
+        next: idle_wait_or_end
+
+      - id: idle_wait_or_end
+        action: utter_idle
+        next: END
