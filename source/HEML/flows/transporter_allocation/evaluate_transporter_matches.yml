@@ -1,0 +1,30 @@
+flows:
+  evaluate_transporter_matches:
+    if: false
+    description: |
+      Given a list of equipment part IDs and available transporters, evaluate all m × n combinations
+      to find the optimal transporter that can carry the maximum number of compatible equipment parts
+      without breaching transporter capacity constraints. If multiple transporters qualify equally,
+      a sampling strategy will be applied to choose one.
+    name: evaluate transporter matches
+    steps:
+      - collect: equipment_part_ids
+        description: "List of equipment part IDs to be evaluated for allocation"
+      - collect: available_transporters
+        description: "List of currently available transporter IDs with metadata"
+      - collect: sampling_strategy
+        description: "Strategy used to break tie between transporters with same max assignments"
+
+      - action: action_evaluate_transporter_matches
+        params:
+          equipment_part_ids: slots.equipment_part_ids
+          transporters: slots.available_transporters
+          sampling_strategy: slots.sampling_strategy
+        next:
+          - if: slots.best_transporter_assignments
+            then:
+              - action: utter_transporter_match_found
+                next: END
+          - else:
+              - action: utter_no_viable_transporter_found
+                next: END

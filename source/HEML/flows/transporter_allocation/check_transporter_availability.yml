@@ -1,0 +1,9 @@
+flows:
+  check_transporter_availability:
+    if: false
+    description: |
+      Return transporters available at the given pickup location.
+    name: check available transporters
+    steps:
+      - action: action_check_transporter_availability
+        next: END

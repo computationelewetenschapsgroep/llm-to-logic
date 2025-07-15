@@ -1,0 +1,33 @@
+flows:
+  allocate_transporter:
+    description: |
+      Find best transporter based on matching equipment part set and capacity limits.
+    name: batch match transporters
+    steps:
+      - call: get_equipment_parts_for_pickup
+        input:
+          pickup_location_id: slots.pickup_location_id
+        output: equipment_part_ids
+
+      - call: get_available_transporters
+        input:
+          pickup_location_id: slots.pickup_location_id
+        output: available_transporters
+
+      - call: evaluate_transporter_matches
+        input:
+          equipment_part_ids: slots.equipment_part_ids
+          transporters: slots.available_transporters
+        output: best_transporter_assignments
+
+      - action: action_assign_transporter_batch
+        params:
+          assignments: slots.best_transporter_assignments
+        next:
+          - if: slots.batch_allocation_success
+            then:
+              - action: utter_batch_allocation_success
+                next: END
+          - else:
+              - action: utter_batch_allocation_failure
+                next: END

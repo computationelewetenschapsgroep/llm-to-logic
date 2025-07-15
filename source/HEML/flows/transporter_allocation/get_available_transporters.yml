@@ -1,0 +1,9 @@
+flows:
+  get_available_transporters:
+    if: false
+    description: |
+      Get all available transporters at a pickup location.
+    name: get available transporters
+    steps:
+      - action: action_get_available_transporters
+        next: END

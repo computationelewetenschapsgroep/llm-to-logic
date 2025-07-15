@@ -1,0 +1,9 @@
+flows:
+  get_equipment_parts_for_pickup:
+    if: false
+    description: |
+      Get all equipment parts ready for pickup from a given location.
+    name: get equipment parts for pickup
+    steps:
+      - action: action_get_equipment_parts_ready_for_pickup
+        next: END
