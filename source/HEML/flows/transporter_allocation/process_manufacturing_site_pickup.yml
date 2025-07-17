@@ -24,3 +24,10 @@ flows:
         input:
           transporter_equipment_mapping: slots.transporter_equipment_mapping
           pickup_from_warehouse : false
+
+      # Update slots to prepare for processing the next manufacturing site
+      #   - Increment the site index
+      #   - Set the next pickup_location_id
+      #   - Update has_more_sites flag to control looping
+      - action: action_update_site_state
+        next: END

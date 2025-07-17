@@ -12,29 +12,25 @@ flows:
           pickup_location_id: slots.pickup_location_id
         output: equipment_part_ids
 
-      - foreach: equipment_part_id in slots.equipment_part_ids
-        do:
-          - action: action_check_assembly_sequence
-            params:
-              equipment_part_id: equipment_part_id
-            output: follows_sequence
+      - set_slots:
+          equipment_index: 0
+          has_more_equipment: true
 
-          - if: slots.follows_sequence
-            then:
-              - call: subflow_pickup_from_manf_site
-                input:
-                  equipment_part_id: equipment_part_id
-              - continue
-            else:
-              - continue
-
-      - call: evaluate_transporter_equipment_mapping
+      - id: process_equipment_step
+        flow: process_single_equipment_part
         input:
+          equipment_part_id: slots.equipment_part_ids[slots.equipment_index]
           pickup_location_id: slots.pickup_location_id
-        output: transporter_equipment_mapping
+        next:
+          - if: slots.has_more_equipment
+            then: process_equipment_step
+          - else:
+              - call: evaluate_transporter_equipment_mapping
+                input:
+                  pickup_location_id: slots.pickup_location_id
+                output: transporter_equipment_mapping
 
-      - call: subflow_prepare_delivery
-        input:
-          transporter_equipment_mapping: slots.transporter_equipment_mapping
-          pickup_from_warehouse : true
-
+              - call: subflow_prepare_delivery
+                input:
+                  transporter_equipment_mapping: slots.transporter_equipment_mapping
+                  pickup_from_warehouse: true

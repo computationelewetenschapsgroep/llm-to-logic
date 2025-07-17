@@ -1,0 +1,18 @@
+flows:
+  process_single_equipment_part:
+    description: Process one equipment part for warehouse pickup.
+    steps:
+      - action: action_check_assembly_sequence
+        params:
+          equipment_part_id: slots.equipment_part_id
+        output: follows_sequence
+
+      - if: slots.follows_sequence
+        then:
+          - call: subflow_pickup_from_manf_site
+            input:
+              equipment_part_id: slots.equipment_part_id
+
+      # Update equipment_index and has_more_equipment slots
+      - action: action_update_equipment_index
+        next: END

@@ -5,11 +5,14 @@ flows:
       using capacity and compatibility constraints.
     name: pickup from manufacturing site
     steps:
-      - call: get_all_manufacturing_sites
-        output: manufacturing_sites
+      - action: get_all_manufacturing_sites
+        next: process_site_step
 
-      - foreach: site in slots.manufacturing_sites
-        do:
-          - call: process_manufacturing_site_pickup
-            input:
-              pickup_location_id: site
+      - id: process_site_step
+        flow: process_manufacturing_site_pickup
+        next:
+          - if: slots.has_more_sites
+            then: process_site_step
+          - else:
+              - action: utter_all_sites_processed
+                next: END
