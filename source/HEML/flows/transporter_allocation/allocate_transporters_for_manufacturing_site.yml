@@ -14,40 +14,11 @@ flows:
           pickup_location_id: slots.pickup_location
         output: available_transporters
 
-      - foreach: transporter in slots.available_transporters
-        do:
-          - foreach: equipment in slots.equipment_part_ids
-            do:
-              - action: action_check_min_capacity
-                params:
-                  transporter: transporter
-                  equipment_list: slots.equipment_part_ids
-                output: has_min_capacity
-                next:
-                  - if: slots.has_min_capacity
-                    then:
-                      - action: action_get_compatible_from_cache
-                        params:
-                          transporter: transporter
-                          equipment_list: slots.equipment_part_ids
-                        output: compatible_list
-                      - action: action_add_to_mapping
-                        params:
-                          transporter: transporter
-                          equipment_ids: slots.compatible_list
-                    else:
-                      - action: action_check_equipment_compatibility
-                        params:
-                          transporter: transporter
-                          equipment: equipment
-                        output: is_compatible
-                        next:
-                          - if: slots.is_compatible
-                            then:
-                              - action: action_add_to_compatibility_list
-                                params:
-                                  transporter: transporter
-                                  equipment: equipment
+      - call: evaluate_transporter_equipment_mapping
+        input:
+          equipment_part_ids: slots.equipment_part_ids
+          sorted_transporters: slots.sorted_transporters
+        output: transporter_equipment_mapping
 
       - call: get_transporter_equipment_map
         output: transporter_equipment_mapping
