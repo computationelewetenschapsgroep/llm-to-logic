@@ -1,0 +1,83 @@
+flows:
+  delivery_from_manufacturing_site:
+    description: |
+      Scenario - Delivery from Manufacturing Site.
+    name: Delivery from Manufacturing Site
+    steps:
+      - collect: transporter_equipment_mapping
+        description: "Mapping of transporter to equipment part ID to be dispatched"
+
+      - action: action_check_assembly_line_operational
+        params:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+        output: is_assembly_operational
+        next:
+          - if: slots.is_assembly_operational
+            then: check_sequence_for_assembly
+          - else: check_warehouse_eligibility
+
+      - id: check_sequence_for_assembly
+        action: action_check_equipment_assembly_sequence
+        params:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+        output: follows_sequence
+        next:
+          - if: slots.follows_sequence
+            then: dispatch_to_assembly
+          - else: check_warehouse_eligibility
+
+      - id: check_warehouse_eligibility
+        action: action_check_warehouse_acceptance
+        params:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+        output: can_dispatch_to_warehouse
+        next:
+          - if: slots.can_dispatch_to_warehouse
+            then: dispatch_to_warehouse
+          - else: hold_in_mfg_yard
+
+      - id: dispatch_to_assembly
+        set_slots:
+          - source: "manufacturer"
+          - destination: "assembly_line"
+        next: generate_trip_and_post_process
+
+      - id: dispatch_to_warehouse
+        set_slots:
+          - source: "manufacturer"
+          - destination: "warehouse"
+        next: generate_trip_and_post_process
+
+      - id: generate_trip_and_post_process
+        call: generate_trip
+        input:
+          source: slots.source
+          destination: slots.destination
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+        output: trip_id
+        next: set_transporter_unavailable
+
+      - id: set_transporter_unavailable
+        action: action_set_transporter_unavailable
+        params:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+          trip_id: slots.trip_id
+        next: post_dispatch
+
+      - id: post_dispatch
+        call: post_dispatch_subflow
+        input:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+        next: END
+
+      - id: hold_in_mfg_yard
+        action: action_hold_in_mfg_yard
+        params:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+        next: assign_pickup_priority
+
+      - id: assign_pickup_priority
+        action: action_assign_pickup_priority
+        params:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+        next: post_dispatch

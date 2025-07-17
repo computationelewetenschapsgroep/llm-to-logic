@@ -1,0 +1,15 @@
+flows:
+  pickup_from_manufacturing_site:
+    description: |
+      Orchestrates equipment pickup from all manufacturing sites. Determines transporter-equipment assignments
+      using capacity and compatibility constraints.
+    name: pickup from manufacturing site
+    steps:
+      - call: get_all_manufacturing_sites
+        output: manufacturing_sites
+
+      - foreach: site in slots.manufacturing_sites
+        do:
+          - call: process_manufacturing_site_pickup
+            input:
+              pickup_location_id: site

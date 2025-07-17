@@ -9,22 +9,67 @@ flows:
     name: evaluate transporter matches
     steps:
       - collect: equipment_part_ids
-        description: "List of equipment part IDs to be evaluated for allocation"
-      - collect: available_transporters
-        description: "List of currently available transporter IDs with metadata"
-      - collect: sampling_strategy
-        description: "Strategy used to break tie between transporters with same max assignments"
+        description: "List of equipment part IDs to evaluate"
+      - collect: sorted_transporters
+        description: "List of transporters sorted by Time to Arrival (TTA)"
 
-      - action: action_evaluate_transporter_matches
+      - set_slots:
+          transporter_equipment_map: {}
+          compatibility_cache: {}
+
+      - foreach: transporter in slots.sorted_transporters
+        do:
+          - foreach: equipment in slots.equipment_part_ids
+            do:
+              - action: action_check_transporter_capacity
+                params:
+                  transporter_id: transporter.id
+                  current_assignments: slots.transporter_equipment_map[transporter.id] | default([])
+                output: has_capacity
+                next:
+                  - if: slots.has_capacity
+                    then: check_compatibility
+                  - else: END
+
+              - id: check_compatibility
+                action: action_get_cached_compatibility
+                params:
+                  transporter_id: transporter.id
+                  equipment_id: equipment
+                  cache: slots.compatibility_cache
+                output: cached_compatibility
+                next:
+                  - if: slots.cached_compatibility is not None
+                    then: maybe_assign_cached
+                  - else: check_direct_compatibility
+
+              - id: check_direct_compatibility
+                action: action_check_equipment_transporter_compatibility
+                params:
+                  transporter_id: transporter.id
+                  equipment_id: equipment
+                output: is_compatible
+                next:
+                  - if: slots.is_compatible
+                    then: assign_equipment
+                  - else: END
+
+              - id: maybe_assign_cached
+                next:
+                  - if: slots.cached_compatibility == true
+                    then: assign_equipment
+                  - else: END
+
+              - id: assign_equipment
+                action: action_add_equipment_to_transporter_map
+                params:
+                  transporter_id: transporter.id
+                  equipment_id: equipment
+                  current_map: slots.transporter_equipment_map
+                output: transporter_equipment_map
+
+      - action: action_finalize_mapping
         params:
-          equipment_part_ids: slots.equipment_part_ids
-          transporters: slots.available_transporters
-          sampling_strategy: slots.sampling_strategy
-        next:
-          - if: slots.best_transporter_assignments
-            then:
-              - action: utter_transporter_match_found
-                next: END
-          - else:
-              - action: utter_no_viable_transporter_found
-                next: END
+          mapping: slots.transporter_equipment_map
+        output: transporter_equipment_mapping
+        next: END

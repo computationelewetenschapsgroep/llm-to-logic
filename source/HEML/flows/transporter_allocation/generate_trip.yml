@@ -1,0 +1,17 @@
+generate_trip.ymlflows:
+  generate_trip:
+    if: false
+    description: |
+      Creates a trip from source to destination for a transporter carrying an equipment part.
+    name: generate transport trip
+    steps:
+      - collect: source
+      - collect: destination
+      - collect: transporter_equipment_mapping
+      - action: action_generate_trip
+        params:
+          source: slots.source
+          destination: slots.destination
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+        output: trip_id
+        next: END

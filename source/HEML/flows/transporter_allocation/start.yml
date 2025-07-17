@@ -1,0 +1,39 @@
+flows:
+  start:
+    description: |
+      Coordinates pickup allocation and dispatching equipment to trips.
+    name: allocate equipment by pickup priority
+    steps:
+      - call: get_equipment_parts_for_pickup
+        output: equipment_parts
+
+      - call: subflow_start
+        input:
+          equipment_parts: slots.equipment_parts
+
+      - action: action_get_pickup_priority_locations
+        params:
+          equipment_parts: slots.equipment_parts
+        output: pickup_locations_sorted_by_priority
+
+      - foreach: pickup_location in slots.pickup_locations_sorted_by_priority
+        do:
+          - set_slots:
+              - current_pickup_location: pickup_location
+
+          - action: action_is_manufacturing_site
+            params:
+              pickup_location: slots.current_pickup_location
+            output: is_manufacturing_site
+            next:
+              - if: slots.is_manufacturing_site
+                then: pickup_from_manufacturing
+              - else: pickup_from_warehouse
+
+      - id: pickup_from_manufacturing
+        call: pickup_from_manufacturing_site
+        next: CONTINUE
+
+      - id: pickup_from_warehouse
+        call: pickup_from_warehouse
+        next: CONTINUE

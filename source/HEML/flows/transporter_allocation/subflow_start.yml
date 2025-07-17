@@ -1,0 +1,35 @@
+flows:
+  subflow_start:
+    description: |
+      subflow_start
+    name: subflow_start - B
+    steps:
+      - collect: equipment_parts
+        description: "List of equipment part IDs"
+
+      - action: action_get_pickup_priority_locations
+        params:
+          equipment_parts: slots.equipment_parts
+        output: pickup_locations_sorted_by_priority
+
+      - foreach: pickup_location in slots.pickup_locations_sorted_by_priority
+        do:
+          - set_slots:
+              - current_pickup_location: pickup_location
+
+          - action: action_is_manufacturing_site
+            params:
+              pickup_location: slots.current_pickup_location
+            output: is_manufacturing_site
+            next:
+              - if: slots.is_manufacturing_site
+                then: pickup_from_manufacturing
+              - else: pickup_from_warehouse
+
+      - id: pickup_from_manufacturing
+        call: pickup_from_manufacturing_site
+        next: CONTINUE
+
+      - id: pickup_from_warehouse
+        call: pickup_from_warehouse
+        next: CONTINUE

@@ -1,0 +1,57 @@
+flows:
+  allocate_transporters_for_manufacturing_site:
+    description: |
+      Allocate transporters for a specific manufacturing site by evaluating available transporters
+    name: allocate transporters for site - C
+    steps:
+      - call: get_equipment_parts_for_pickup
+        input:
+          pickup_location_id: slots.pickup_location
+        output: equipment_part_ids
+
+      - call: get_transporters_by_tta
+        input:
+          pickup_location_id: slots.pickup_location
+        output: available_transporters
+
+      - foreach: transporter in slots.available_transporters
+        do:
+          - foreach: equipment in slots.equipment_part_ids
+            do:
+              - action: action_check_min_capacity
+                params:
+                  transporter: transporter
+                  equipment_list: slots.equipment_part_ids
+                output: has_min_capacity
+                next:
+                  - if: slots.has_min_capacity
+                    then:
+                      - action: action_get_compatible_from_cache
+                        params:
+                          transporter: transporter
+                          equipment_list: slots.equipment_part_ids
+                        output: compatible_list
+                      - action: action_add_to_mapping
+                        params:
+                          transporter: transporter
+                          equipment_ids: slots.compatible_list
+                    else:
+                      - action: action_check_equipment_compatibility
+                        params:
+                          transporter: transporter
+                          equipment: equipment
+                        output: is_compatible
+                        next:
+                          - if: slots.is_compatible
+                            then:
+                              - action: action_add_to_compatibility_list
+                                params:
+                                  transporter: transporter
+                                  equipment: equipment
+
+      - call: get_transporter_equipment_map
+        output: transporter_equipment_mapping
+
+      - call: dispatch_transporters
+        input:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping

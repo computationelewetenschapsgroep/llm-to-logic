@@ -1,0 +1,40 @@
+flows:
+  pickup_from_warehouse:
+    description: |
+      Scenario - Pickup from Warehouse.
+    name: Pickup from Warehouse.
+    steps:
+      - collect: pickup_location_id
+        description: "ID of the warehouse acting as the pickup location"
+
+      - call: get_equipment_parts_for_pickup
+        input:
+          pickup_location_id: slots.pickup_location_id
+        output: equipment_part_ids
+
+      - foreach: equipment_part_id in slots.equipment_part_ids
+        do:
+          - action: action_check_assembly_sequence
+            params:
+              equipment_part_id: equipment_part_id
+            output: follows_sequence
+
+          - if: slots.follows_sequence
+            then:
+              - call: subflow_pickup_from_manf_site
+                input:
+                  equipment_part_id: equipment_part_id
+              - continue
+            else:
+              - continue
+
+      - call: evaluate_transporter_equipment_mapping
+        input:
+          pickup_location_id: slots.pickup_location_id
+        output: transporter_equipment_mapping
+
+      - call: subflow_prepare_delivery
+        input:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+          pickup_from_warehouse : true
+

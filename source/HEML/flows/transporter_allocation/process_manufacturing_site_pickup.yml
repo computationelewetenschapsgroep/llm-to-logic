@@ -1,0 +1,26 @@
+flows:
+  process_manufacturing_site_pickup:
+    description: |
+      Handles transporter allocation logic for one manufacturing site.
+    name: Process manufacturing site pickup
+    steps:
+      - call: get_equipment_parts_for_pickup
+        input:
+          pickup_location_id: slots.pickup_location_id
+        output: equipment_part_ids
+
+      - call: get_available_transporters_by_tta
+        input:
+          pickup_location_id: slots.pickup_location_id
+        output: sorted_transporters
+
+      - call: evaluate_transporter_equipment_mapping
+        input:
+          equipment_part_ids: slots.equipment_part_ids
+          sorted_transporters: slots.sorted_transporters
+        output: transporter_equipment_mapping
+
+      - call: subflow_prepare_delivery
+        input:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+          pickup_from_warehouse : false

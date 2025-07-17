@@ -1,9 +1,0 @@
-flows:
-  check_transporter_compatibility:
-    if: false
-    description: |
-      Check if a transporter is compatible with a given equipment part.
-    name: check transporter compatibility
-    steps:
-      - action: action_check_transporter_compatibility
-        next: END

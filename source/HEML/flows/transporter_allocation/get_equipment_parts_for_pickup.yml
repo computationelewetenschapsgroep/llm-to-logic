@@ -5,5 +5,19 @@ flows:
       Get all equipment parts ready for pickup from a given location.
     name: get equipment parts for pickup
     steps:
-      - action: action_get_equipment_parts_ready_for_pickup
-        next: END
+      - collect: pickup_location_id
+        description: "ID of the pickup location (optional)"
+
+      - noop: true
+        next:
+          - if: slots.pickup_location_id
+            then:
+              - action: action_get_equipment_parts_ready_for_pickup
+                params:
+                  location_id: slots.pickup_location_id
+                output: equipment_parts
+                next: END
+          - else:
+              - action: action_get_all_equipment_parts_ready_for_pickup
+                output: equipment_parts
+                next: END

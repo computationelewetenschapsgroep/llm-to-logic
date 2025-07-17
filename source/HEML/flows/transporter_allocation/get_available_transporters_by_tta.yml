@@ -1,0 +1,14 @@
+flows:
+  get_available_transporters_by_tta:
+    if: false
+    description: |
+      Fetch available transporters for a given pickup location based on their estimated Time to Arrival (TTA).
+    name: get available transporters by TTA
+    steps:
+      - collect: pickup_location_id
+        description: "Pickup location ID (manufacturing site)"
+
+      - action: action_get_transporters_by_tta
+        params:
+          pickup_location_id: slots.pickup_location_id
+        output: available_transporters
