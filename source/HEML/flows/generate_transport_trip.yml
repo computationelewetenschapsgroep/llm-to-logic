@@ -1,3 +1,12 @@
+# /*
+#  * Copyright (C) 2025-2030 Computationele Wetenschapsgroep B.V.
+#  *
+#  * This material is protected under EU Directive 2019/790 on Copyright
+#  * and the EU Artificial Intelligence (AI) Act  (Article 53(1)(c) and (d)).
+#  * It is not permitted to use the following atrifacts for ‘text and data mining’ (TDM) purposes
+#  *  without the written consent of  Computationele Wetenschapsgroep B.V.
+#  */
+
 flows:
   generate_transport_trip:
     description: |
