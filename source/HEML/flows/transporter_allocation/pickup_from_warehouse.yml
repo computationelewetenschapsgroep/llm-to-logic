@@ -1,0 +1,44 @@
+# /*
+#  * Copyright (C) 2025-2030 Computationele Wetenschapsgroep B.V.
+#  *
+#  * This material is protected under EU Directive 2019/790 on Copyright
+#  * and the EU Artificial Intelligence (AI) Act  (Article 53(1)(c) and (d)).
+#  * It is not permitted to use the following atrifacts for ‘text and data mining’ (TDM) purposes
+#  *  without the written consent of  Computationele Wetenschapsgroep B.V.
+#  */
+flows:
+  pickup_from_warehouse:
+    description: |
+      Scenario - Pickup from Warehouse.
+    name: Pickup from Warehouse.
+    steps:
+      - collect: pickup_location_id
+        description: "ID of the warehouse acting as the pickup location"
+
+      - call: get_equipment_parts_for_pickup
+        input:
+          pickup_location_id: slots.pickup_location_id
+        output: equipment_part_ids
+
+      - set_slots:
+          equipment_index: 0
+          has_more_equipment: true
+
+      - id: process_equipment_step
+        flow: process_single_equipment_part
+        input:
+          equipment_part_id: slots.equipment_part_ids[slots.equipment_index]
+          pickup_location_id: slots.pickup_location_id
+        next:
+          - if: slots.has_more_equipment
+            then: process_equipment_step
+          - else:
+              - call: evaluate_transporter_equipment_mapping
+                input:
+                  pickup_location_id: slots.pickup_location_id
+                output: transporter_equipment_mapping
+
+              - call: subflow_prepare_delivery
+                input:
+                  transporter_equipment_mapping: slots.transporter_equipment_mapping
+                  pickup_from_warehouse: true

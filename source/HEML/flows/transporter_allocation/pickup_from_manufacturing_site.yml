@@ -1,0 +1,26 @@
+# /*
+#  * Copyright (C) 2025-2030 Computationele Wetenschapsgroep B.V.
+#  *
+#  * This material is protected under EU Directive 2019/790 on Copyright
+#  * and the EU Artificial Intelligence (AI) Act  (Article 53(1)(c) and (d)).
+#  * It is not permitted to use the following atrifacts for ‘text and data mining’ (TDM) purposes
+#  *  without the written consent of  Computationele Wetenschapsgroep B.V.
+#  */
+flows:
+  pickup_from_manufacturing_site:
+    description: |
+      Orchestrates equipment pickup from all manufacturing sites. Determines transporter-equipment assignments
+      using capacity and compatibility constraints.
+    name: pickup from manufacturing site
+    steps:
+      - action: get_all_manufacturing_sites
+        next: process_site_step
+
+      - id: process_site_step
+        flow: process_manufacturing_site_pickup
+        next:
+          - if: slots.has_more_sites
+            then: process_site_step
+          - else:
+              - action: utter_all_sites_processed
+                next: END

@@ -1,0 +1,53 @@
+# /*
+#  * Copyright (C) 2025-2030 Computationele Wetenschapsgroep B.V.
+#  *
+#  * This material is protected under EU Directive 2019/790 on Copyright
+#  * and the EU Artificial Intelligence (AI) Act  (Article 53(1)(c) and (d)).
+#  * It is not permitted to use the following atrifacts for ‘text and data mining’ (TDM) purposes
+#  *  without the written consent of  Computationele Wetenschapsgroep B.V.
+#  */
+flows:
+  delivery_from_warehouse:
+    description: |
+      Scenario - Delivery from Warehouse
+    name: Delivery from Warehouse
+    steps:
+      - collect: transporter_equipment_mapping
+        description: "Mapping of transporter to equipment part ID to be dispatched"
+
+      - action: action_check_assembly_line_operational
+        params:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+        output: is_assembly_operational
+        next:
+          - if: slots.is_assembly_operational
+            then: dispatch_to_assembly
+          - else: post_dispatch_fallback
+
+      - id: dispatch_to_assembly
+        set_slots:
+          - source: "manufacturer"
+          - destination: "assembly_line"
+        next: generate_trip_and_post_process
+
+      - id: generate_trip_and_post_process
+        call: generate_trip
+        input:
+          source: slots.source
+          destination: slots.destination
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+        output: trip_id
+        next: mark_transporter_unavailable
+
+      - id: mark_transporter_unavailable
+        action: action_set_transporter_unavailable
+        params:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+          trip_id: slots.trip_id
+        next: post_dispatch_fallback
+
+      - id: post_dispatch_fallback
+        call: post_dispatch_subflow
+        input:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping
+        next: END

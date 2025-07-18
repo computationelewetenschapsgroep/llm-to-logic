@@ -1,0 +1,36 @@
+# /*
+#  * Copyright (C) 2025-2030 Computationele Wetenschapsgroep B.V.
+#  *
+#  * This material is protected under EU Directive 2019/790 on Copyright
+#  * and the EU Artificial Intelligence (AI) Act  (Article 53(1)(c) and (d)).
+#  * It is not permitted to use the following atrifacts for ‘text and data mining’ (TDM) purposes
+#  *  without the written consent of  Computationele Wetenschapsgroep B.V.
+#  */
+flows:
+  allocate_transporters_for_manufacturing_site:
+    description: |
+      Allocate transporters for a specific manufacturing site by evaluating available transporters
+    name: allocate transporters for site - C
+    steps:
+      - call: get_equipment_parts_for_pickup
+        input:
+          pickup_location_id: slots.pickup_location
+        output: equipment_part_ids
+
+      - call: get_transporters_by_tta
+        input:
+          pickup_location_id: slots.pickup_location
+        output: available_transporters
+
+      - call: evaluate_transporter_equipment_mapping
+        input:
+          equipment_part_ids: slots.equipment_part_ids
+          sorted_transporters: slots.sorted_transporters
+        output: transporter_equipment_mapping
+
+      - call: get_transporter_equipment_map
+        output: transporter_equipment_mapping
+
+      - call: dispatch_transporters
+        input:
+          transporter_equipment_mapping: slots.transporter_equipment_mapping

@@ -1,0 +1,63 @@
+# /*
+#  * Copyright (C) 2025-2030 Computationele Wetenschapsgroep B.V.
+#  *
+#  * This material is protected under EU Directive 2019/790 on Copyright
+#  * and the EU Artificial Intelligence (AI) Act  (Article 53(1)(c) and (d)).
+#  * It is not permitted to use the following atrifacts for ‘text and data mining’ (TDM) purposes
+#  *  without the written consent of  Computationele Wetenschapsgroep B.V.
+#  */
+
+flows:
+  allocate_equipment_transport:
+    description: |
+      Allocates transporters for a given equipment schedule and date.
+    name: allocate transport for equipment
+    steps:
+      - id: collect_equipment_id
+        collect: equipment_id
+        description: "ID of the equipment to prepare for assembly."
+        ask_before_filling: true
+        next: get_required_parts
+
+      - id: get_required_parts
+        action: action_get_required_parts
+        params:
+          equipment_id: slots.equipment_id
+        set_slots:
+          - required_part_types: result
+        next: locate_parts
+
+      - id: locate_parts
+        action: action_locate_parts_for_equipment
+        params:
+          equipment_id: slots.equipment_id
+          part_types: slots.required_part_types
+        set_slots:
+          - available_parts: result.available_parts
+          - missing_parts: result.missing_parts
+        next: check_missing_parts
+
+      - id: check_missing_parts
+        if: "slots.missing_parts"
+        then: report_missing_parts
+        else: allocate_transport
+
+      - id: report_missing_parts
+        action: utter_missing_parts
+        params:
+          missing_parts: slots.missing_parts
+        next: END
+
+      - id: allocate_transport
+        action: action_allocate_transport_trips
+        params:
+          part_ids: slots.available_parts
+        set_slots:
+          - transport_trips: result
+        next: confirm_transport_allocation
+
+      - id: confirm_transport_allocation
+        action: utter_transport_allocated
+        params:
+          transport_trips: slots.transport_trips
+        next: END

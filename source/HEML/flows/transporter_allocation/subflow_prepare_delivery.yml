@@ -1,0 +1,56 @@
+# /*
+#  * Copyright (C) 2025-2030 Computationele Wetenschapsgroep B.V.
+#  *
+#  * This material is protected under EU Directive 2019/790 on Copyright
+#  * and the EU Artificial Intelligence (AI) Act  (Article 53(1)(c) and (d)).
+#  * It is not permitted to use the following atrifacts for ‘text and data mining’ (TDM) purposes
+#  *  without the written consent of  Computationele Wetenschapsgroep B.V.
+#  */
+flows:
+  subflow_prepare_delivery:
+    if: false
+    description: |
+      Prepares the delivery based on pickup source — either warehouse or manufacturer site.
+    name: subflow_prepare_delivery A
+    steps:
+      - collect: transporter_equipment_mapping
+        description: "Mapping of transporter to equipment part IDs"
+
+      - collect: pickup_from_warehouse
+        description: "Boolean flag indicating pickup source"
+
+      - set_slots:
+          assignment_index: 0
+          has_more_assignments: true
+
+      # process one assignment at a time
+      - id: process_assignment_step
+        action: action_set_current_assignment
+        input:
+          assignments: slots.transporter_equipment_mapping
+          index: slots.assignment_index
+        output: current_assignment
+
+      - if: slots.pickup_from_warehouse
+        then:
+          - call: delivery_from_warehouse
+            input:
+              transporter_equipment_mapping: slots.current_assignment
+        else:
+          - call: delivery_from_manufacturer_site
+            input:
+              transporter_equipment_mapping: slots.current_assignment
+
+      # update loop index and check if more assignments remain
+      - id: update_assignment_index
+        action: action_update_assignment_index
+        input:
+          assignments: slots.transporter_equipment_mapping
+          current_index: slots.assignment_index
+        output:
+          assignment_index: slots.assignment_index
+          has_more_assignments: slots.has_more_assignments
+        next:
+          - if: slots.has_more_assignments
+            then: process_assignment_step
+          - else: END

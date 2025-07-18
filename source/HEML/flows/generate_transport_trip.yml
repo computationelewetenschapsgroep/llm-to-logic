@@ -1,0 +1,103 @@
+# /*
+#  * Copyright (C) 2025-2030 Computationele Wetenschapsgroep B.V.
+#  *
+#  * This material is protected under EU Directive 2019/790 on Copyright
+#  * and the EU Artificial Intelligence (AI) Act  (Article 53(1)(c) and (d)).
+#  * It is not permitted to use the following atrifacts for ‘text and data mining’ (TDM) purposes
+#  *  without the written consent of  Computationele Wetenschapsgroep B.V.
+#  */
+
+flows:
+  generate_transport_trip:
+    description: |
+      Creates and assigns a transport trip to deliver equipment from a fabrication site.
+      Applies resource filtering, sampling, and fabrication lag logic.
+    name: create transport trip
+    steps:
+      - id: collect_equipment_allocations
+        collect: equipment_allocations
+        description: |
+          List of equipment allocations with pickup date, location, and required parts.
+        next: get_transport_resources
+
+      - id: get_transport_resources
+        action: action_get_available_transport_resources
+        params:
+          equipment_allocations: slots.equipment_allocations
+        set_slots:
+          - transport_options: result
+        next: filter_resources
+
+      - id: filter_resources
+        action: action_filter_excluded_resources
+        params:
+          options: slots.transport_options
+        set_slots:
+          - filtered_resources: result
+        next: determine_priority
+
+      - id: determine_priority
+        action: action_determine_priority
+        params:
+          equipment_allocations: slots.equipment_allocations
+        set_slots:
+          - trip_priority: result
+        next: sample_resource
+
+      - id: sample_resource
+        action: action_sample_transport_resource
+        params:
+          date: slots.equipment_allocations[0].pickup_date
+          yard: slots.equipment_allocations[0].fabrication_yard
+          available_resources: slots.filtered_resources
+          strategy: slots.transport_sampling_strategy
+        set_slots:
+          - selected_resource: result
+        next: generate_trip_id
+
+      - id: generate_trip_id
+        action: action_generate_trip_id
+        params:
+          equipment_ids: slots.equipment_allocations[*].equipment_id
+        set_slots:
+          - trip_id: result
+        next: calculate_fabrication_lag
+
+      - id: calculate_fabrication_lag
+        action: action_calculate_fabrication_lag
+        params:
+          yard: slots.equipment_allocations[0].fabrication_yard
+          date: slots.equipment_allocations[0].pickup_date
+        set_slots:
+          - buffer_days: result
+        next: create_trip
+
+      - id: create_trip
+        action: action_create_transport_trip
+        params:
+          trip_id: slots.trip_id
+          equipment_ids: slots.equipment_allocations[*].equipment_id
+          pickup_location: slots.equipment_allocations[0].fabrication_yard
+          pickup_date: slots.equipment_allocations[0].pickup_date
+          resource: slots.selected_resource
+          buffer_days: slots.buffer_days
+          priority: slots.trip_priority
+        next: evaluate_trip_assignment
+
+      - id: evaluate_trip_assignment
+        if: "not slots.filtered_resources"
+        then: add_trip_to_backlog
+        else: confirm_trip_created
+
+      - id: add_trip_to_backlog
+        action: action_add_to_trip_backlog
+        params:
+          trip_id: slots.trip_id
+        next: END
+
+      - id: confirm_trip_created
+        action: utter_trip_created
+        params:
+          trip_id: slots.trip_id
+          resource: slots.selected_resource
+        next: END

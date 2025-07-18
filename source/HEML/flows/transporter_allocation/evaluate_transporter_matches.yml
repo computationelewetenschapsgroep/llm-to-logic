@@ -1,0 +1,136 @@
+# /*
+#  * Copyright (C) 2025-2030 Computationele Wetenschapsgroep B.V.
+#  *
+#  * This material is protected under EU Directive 2019/790 on Copyright
+#  * and the EU Artificial Intelligence (AI) Act  (Article 53(1)(c) and (d)).
+#  * It is not permitted to use the following atrifacts for ‘text and data mining’ (TDM) purposes
+#  *  without the written consent of  Computationele Wetenschapsgroep B.V.
+#  */
+flows:
+  evaluate_transporter_matches:
+    if: false
+    description: |
+      Given a list of equipment part IDs and available transporters, evaluate all m × n combinations
+      to find the optimal transporter that can carry the maximum number of compatible equipment parts
+      without breaching transporter capacity constraints. If multiple transporters qualify equally,
+      a sampling strategy will be applied to choose one.
+    name: evaluate transporter matches
+    steps:
+      - collect: equipment_part_ids
+        description: "List of equipment part IDs to evaluate"
+      - collect: sorted_transporters
+        description: "List of transporters sorted by Time to Arrival (TTA)"
+      - collect: sampling_strategy
+        description: "Strategy used to break tie between transporters with same max assignments"
+
+      - set_slots:
+          transporter_equipment_map: {}
+          compatibility_cache: {}
+          transporter_index: 0
+          equipment_index: 0
+          has_more_transporters: true
+          has_more_equipment: true
+
+      # processing one transporter
+      - id: process_transporter
+        action: action_set_current_transporter
+        input:
+          transporter_list: slots.sorted_transporters
+          index: slots.transporter_index
+        output: current_transporter
+
+      # processing one equipment for the current transporter
+      - id: process_equipment_for_transporter
+        action: action_set_current_equipment
+        input:
+          equipment_list: slots.equipment_part_ids
+          index: slots.equipment_index
+        output: current_equipment
+
+      # check transporter capacity before assigning equipment
+      - action: action_check_transporter_capacity
+        params:
+          transporter_id: slots.current_transporter.id
+          current_assignments: slots.transporter_equipment_map[slots.current_transporter.id] | default([])
+        output: has_capacity
+        next:
+          - if: slots.has_capacity
+            then: check_compatibility
+          - else: update_equipment_index
+        # skips this equipment if transporter has no capacity left
+
+      - id: check_compatibility
+        action: action_get_cached_compatibility
+        params:
+          transporter_id: slots.current_transporter.id
+          equipment_id: slots.current_equipment
+          cache: slots.compatibility_cache
+        output: cached_compatibility
+        next:
+          - if: slots.cached_compatibility is not None
+            then: maybe_assign_cached
+          - else: check_direct_compatibility
+
+      - id: check_direct_compatibility
+        action: action_check_equipment_transporter_compatibility
+        params:
+          transporter_id: slots.current_transporter.id
+          equipment_id: slots.current_equipment
+        output: is_compatible
+        next:
+          - if: slots.is_compatible
+            then: assign_equipment
+          - else: update_equipment_index
+
+      - id: maybe_assign_cached
+        next:
+          - if: slots.cached_compatibility == true
+            then: assign_equipment
+          - else: update_equipment_index
+
+      - id: assign_equipment
+        action: action_add_equipment_to_transporter_map
+        params:
+          transporter_id: slots.current_transporter.id
+          equipment_id: slots.current_equipment
+          current_map: slots.transporter_equipment_map
+          sampling_strategy: slots.sampling_strategy
+        output: transporter_equipment_map
+        next: update_equipment_index
+
+      # update equipment index
+      - id: update_equipment_index
+        action: action_update_equipment_index
+        input:
+          current_index: slots.equipment_index
+          equipment_list: slots.equipment_part_ids
+        output:
+          equipment_index: slots.equipment_index
+          has_more_equipment: slots.has_more_equipment
+        next:
+          - if: slots.has_more_equipment
+            then: process_equipment_for_transporter
+          - else: update_transporter_index
+
+      # update transporter index
+      - id: update_transporter_index
+        action: action_update_transporter_index
+        input:
+          current_index: slots.transporter_index
+          transporter_list: slots.sorted_transporters
+        output:
+          transporter_index: slots.transporter_index
+          has_more_transporters: slots.has_more_transporters
+        next:
+          - if: slots.has_more_transporters
+            then:
+              - set_slots:
+                  equipment_index: 0
+                  has_more_equipment: true
+              - process_transporter
+          - else:
+              - action: action_finalize_mapping
+                params:
+                  mapping: slots.transporter_equipment_map
+                output: transporter_equipment_mapping
+                next: END

@@ -1,0 +1,31 @@
+# /*
+#  * Copyright (C) 2025-2030 Computationele Wetenschapsgroep B.V.
+#  *
+#  * This material is protected under EU Directive 2019/790 on Copyright
+#  * and the EU Artificial Intelligence (AI) Act  (Article 53(1)(c) and (d)).
+#  * It is not permitted to use the following atrifacts for ‘text and data mining’ (TDM) purposes
+#  *  without the written consent of  Computationele Wetenschapsgroep B.V.
+#  */
+flows:
+  get_equipment_parts_for_pickup:
+    if: false
+    description: |
+      Get all equipment parts ready for pickup from a given location.
+    name: get equipment parts for pickup
+    steps:
+      - collect: pickup_location_id
+        description: "ID of the pickup location (optional)"
+
+      - noop: true
+        next:
+          - if: slots.pickup_location_id
+            then:
+              - action: action_get_equipment_parts_ready_for_pickup
+                params:
+                  location_id: slots.pickup_location_id
+                output: equipment_parts
+                next: END
+          - else:
+              - action: action_get_all_equipment_parts_ready_for_pickup
+                output: equipment_parts
+                next: END
