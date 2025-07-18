@@ -8,8 +8,8 @@ import os
 domain_builder = DomainBuilder()
 
 llama_3b = HUGGING_FACE(
-    model="Llama-3.2-3B-Instruct",
-    model_path="meta-llama/Llama-3.2-3B-Instruct",
+    model="Llama-3.2-1B-Instruct",
+    model_path="meta-llama/Llama-3.2-1B-Instruct",
     config_path="/usr/local/lib/python3.10/site-packages/l2p/llm/utils/llm.yaml",
     #api_key= os.environ["API_KEY"]
 )
