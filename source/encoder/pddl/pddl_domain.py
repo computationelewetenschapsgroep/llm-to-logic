@@ -6,7 +6,8 @@ from .type import Type
 from .pddl_predicate import PDDLPredicate
 from .pddl_action import PDDLAction
 from .pddl_literal import PDDLLiteral
-
+from .pddl_event import PDDLEvent
+from .pddl_process import PDDLProcess
 class PDDLDomain:
     def __init__(self):
         self.requirements: list[str] = [":typing", ":equality", ":action-costs"]
@@ -15,6 +16,8 @@ class PDDLDomain:
         self.predicates :  dict[str, PDDLPredicateDef] = {}
         self.functions :  dict[str, PDDLPredicateDef] = {}
         self.actions : list[PDDLAction] = []
+        self.events : list[PDDLEvent] = []
+        self.processes : list[PDDLProcess] = []
 
 
     def get_type(self, name) -> Type:
@@ -32,7 +35,7 @@ class PDDLDomain:
     def get_function(self, name) -> PDDLPredicateDef:
         assert name in self.functions, "Function " + name + " not defined in domain!"
         return self.functions[name]
-
+    
     def to_pddl(self, name: str) -> str:
 
         sorted_types = list(self.types.values())
@@ -54,5 +57,10 @@ class PDDLDomain:
         s += "  (:predicates\n\t\t" + "\n\t\t".join(predicate.to_pddl() for predicate in sorted_predicates) + "\n\t)\n\n\n"
         s += "  (:functions\n\t\t" + "\n\t\t".join(f"{function.to_pddl()}" for function in sorted_function) + "\n\t)\n\n\n"
         s += "\n\n\n".join(action.to_pddl() for action in self.actions)
+        s += "\n"
+        s += "\n\n\n".join(event.to_pddl() for event in self.events)
+        s += "\n"
+        s += "\n\n\n".join(process.to_pddl() for process in self.processes)
         s += ")"
+        
         return s
